@@ -861,25 +861,28 @@ def _decompose(flag, value):
     # _decompose is only called if the value is not named
     not_covered = value
     negative = value < 0
+    flags_to_check = flag
     # issue29167: wrap accesses to _value2member_map_ in a list to avoid race
     #             conditions between iterating over it and having more pseudo-
     #             members added to it
     if negative:
         # only check for named flags
         flags_to_check = [
-                (m, v)
-                for v, m in list(flag._value2member_map_.items())
+                m
+                for _, m in list(flag._value2member_map_.items())
                 if m.name is not None
                 ]
     else:
         # check for named flags and powers-of-two flags
-        flags_to_check = [
-                (m, v)
-                for v, m in list(flag._value2member_map_.items())
-                if m.name is not None or _power_of_two(v)
+        if issubclass(flag, IntFlag):
+            flags_to_check = [
+                    m
+                    for v, m in list(flag._value2member_map_.items())
+                    if m.name is not None or _power_of_two(v)
                 ]
     members = []
-    for member, member_value in flags_to_check:
+    for member in flags_to_check:
+        member_value = member.value
         if member_value and member_value & value == member_value:
             members.append(member)
             not_covered &= ~member_value
