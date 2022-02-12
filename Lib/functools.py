@@ -963,6 +963,17 @@ class singledispatchmethod:
 _NOT_FOUND = object()
 
 
+class _await_property:
+    def __init__(self, awaitable, instance):
+        self.awaitable = awaitable
+        self.instance = instance
+        self.result = _NOT_FOUND
+    def __await__(self):
+        if self.result is _NOT_FOUND:
+            self.result = yield from self.awaitable(self.instance).__await__()
+        return self.result
+
+
 class cached_property:
     def __init__(self, func):
         self.func = func
@@ -999,7 +1010,11 @@ class cached_property:
                 # check if another thread filled cache while we awaited lock
                 val = cache.get(self.attrname, _NOT_FOUND)
                 if val is _NOT_FOUND:
-                    val = self.func(instance)
+                    import inspect
+                    if inspect.iscoroutinefunction(self.func):
+                        val = _await_property(self.func, instance)
+                    else:
+                        val = self.func(instance)
                     try:
                         cache[self.attrname] = val
                     except TypeError:
