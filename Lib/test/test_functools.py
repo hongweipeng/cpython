@@ -3003,6 +3003,24 @@ class TestCachedProperty(unittest.TestCase):
         self.assertEqual(b.cp, 2)
         self.assertEqual(a.cp, 1)
 
+    def test_coroutine_cached_property(self):
+        import asyncio
+        class A:
+            _cost = 1
+            @functools.cached_property
+            async def cost(self):
+                self._cost += 1
+                return self._cost
+
+        async def main():
+            a = A()
+            self.assertEqual(await a.cost, 2)
+            self.assertEqual(await a.cost, 2)
+
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(main())
+
     def test_set_name_not_called(self):
         cp = py_functools.cached_property(lambda s: None)
         class Foo:
